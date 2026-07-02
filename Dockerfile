@@ -22,9 +22,10 @@ WORKDIR /app
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
+COPY entrypoint.sh /entrypoint.sh
 
-RUN mkdir -p /app/tmp
+RUN chmod +x /entrypoint.sh && mkdir -p /app/tmp
 
 EXPOSE 3333
 
-CMD sh -c "node build/ace.js migration:run --force && node build/bin/server.js"
+ENTRYPOINT ["/entrypoint.sh"]
