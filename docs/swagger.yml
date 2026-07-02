@@ -1,0 +1,222 @@
+openapi: '3.0.3'
+info:
+  title: Montree Shop List API
+  description: API REST para gerenciamento de catálogo de itens e lista de compras com compradores aleatórios do GitHub.
+  version: '1.0.0'
+  contact:
+    name: Fabio
+
+servers:
+  - url: 'http://localhost:3333'
+    description: Servidor local de desenvolvimento
+
+paths:
+  /itens:
+    post:
+      tags:
+        - Itens
+      summary: Cria um novo item no catálogo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+      responses:
+        '201':
+          description: Item criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '422':
+          description: Dados de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    get:
+      tags:
+        - Itens
+      summary: Lista todos os itens cadastrados
+      responses:
+        '200':
+          description: Lista de itens
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+
+  /compras:
+    post:
+      tags:
+        - Compras
+      summary: Cria um novo registro de compra com comprador aleatório do GitHub
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCompraRequest'
+      responses:
+        '201':
+          description: Compra criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Compra'
+        '400':
+          description: Item fora de estoque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Item não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Dados de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '502':
+          description: Serviço externo (GitHub) indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Compras
+      summary: Lista todos os registros de compra com dados do item relacionado
+      responses:
+        '200':
+          description: Lista de compras
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompraWithItem'
+
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: 'Notebook'
+        preco:
+          type: number
+          format: float
+          example: 3500.00
+        qtd_atual:
+          type: integer
+          example: 10
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateItemRequest:
+      type: object
+      required:
+        - nome
+        - preco
+        - qtd_atual
+      properties:
+        nome:
+          type: string
+          example: 'Notebook'
+        preco:
+          type: number
+          minimum: 0
+          example: 3500.00
+        qtd_atual:
+          type: integer
+          minimum: 0
+          example: 10
+
+    CreateCompraRequest:
+      type: object
+      required:
+        - item_id
+      properties:
+        item_id:
+          type: integer
+          minimum: 1
+          example: 1
+
+    Compra:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        comprador_github_login:
+          type: string
+          example: 'torvalds'
+        item_id:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CompraWithItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        comprador_github_login:
+          type: string
+          example: 'torvalds'
+        item_id:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        item:
+          $ref: '#/components/schemas/Item'
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Item fora de estoque'
+
+    ValidationError:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              message:
+                type: string
+              field:
+                type: string
+              rule:
+                type: string
