@@ -50,6 +50,8 @@
   },
   "dependencies": {
     "@adonisjs/core": "^7.3.3",
+    "@adonisjs/cors": "^3.0.0",
+    "@adonisjs/limiter": "^3.0.1",
     "@adonisjs/lucid": "^22.4.2",
     "@vinejs/vine": "^4.4.0",
     "better-sqlite3": "^12.10.0",

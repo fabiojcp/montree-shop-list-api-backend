@@ -100,6 +100,18 @@ Importe o arquivo `montree-shop-list.postman_collection.json` no Postman para te
 npm test
 ```
 
+## Segurança
+
+| Proteção                | Implementação                                                            |
+| ----------------------- | ------------------------------------------------------------------------ |
+| **Rate Limiting**       | 60 req/min para leitura, 10 req/min para escrita (por IP)                |
+| **SQL Injection**       | ORM Lucid usa prepared statements — queries parametrizadas por padrão    |
+| **Validação de Input**  | VineJS com limites de caracteres (`nome` ≤ 200, `preco` ≤ 99.999.999,99) |
+| **CORS**                | Configurado via `@adonisjs/cors` — permite apenas GET e POST             |
+| **Security Headers**    | X-Content-Type-Options, X-Frame-Options, Referrer-Policy, CSP, etc.      |
+| **Body Size Limit**     | JSON limitado a 1 MB                                                     |
+| **Tratamento de Erros** | Respostas JSON padronizadas, sem vazamento de stack trace em produção    |
+
 ## Estrutura do Projeto
 
 ```
@@ -109,7 +121,9 @@ app/
 │   └── compras_controller.ts
 ├── exceptions/       # Tratamento de erros
 │   └── handler.ts
-├── middleware/        # Middleware HTTP
+├── middleware/        # Middleware HTTP (CORS, security headers, rate limit)
+│   ├── container_bindings_middleware.ts
+│   └── security_headers_middleware.ts
 ├── models/           # Models Lucid ORM
 │   ├── item.ts
 │   └── compra.ts
@@ -118,13 +132,16 @@ app/
 └── validators/       # Validação de requisições
     ├── item.ts
     └── compra.ts
-config/               # Configurações
+config/               # Configurações (database, cors, limiter, bodyparser)
 database/
 └── migrations/       # Migrations do banco
 docs/
 └── swagger.yml       # Especificação OpenAPI
 start/
-└── routes.ts         # Definição de rotas
+├── routes.ts         # Definição de rotas
+├── kernel.ts         # Registro de middlewares
+├── limiter.ts        # Configuração de rate limiting
+└── env.ts            # Variáveis de ambiente tipadas
 ```
 
 ---

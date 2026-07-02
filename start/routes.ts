@@ -2,15 +2,24 @@ import router from '@adonisjs/core/services/router'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { globalThrottle, createThrottle } from '#start/limiter'
 
 const ItensController = () => import('#controllers/itens_controller')
 const ComprasController = () => import('#controllers/compras_controller')
 
-router.post('/itens', [ItensController, 'store'])
-router.get('/itens', [ItensController, 'index'])
+router
+  .group(() => {
+    router.get('/', [ItensController, 'index']).use(globalThrottle)
+    router.post('/', [ItensController, 'store']).use(createThrottle)
+  })
+  .prefix('/itens')
 
-router.post('/compras', [ComprasController, 'store'])
-router.get('/compras', [ComprasController, 'index'])
+router
+  .group(() => {
+    router.get('/', [ComprasController, 'index']).use(globalThrottle)
+    router.post('/', [ComprasController, 'store']).use(createThrottle)
+  })
+  .prefix('/compras')
 
 router.get('/swagger', async ({ response }) => {
   const html = `<!DOCTYPE html>
