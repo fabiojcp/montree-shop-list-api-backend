@@ -1,55 +1,18 @@
-# syntax = docker/dockerfile:1
+FROM node:24-alpine
 
-# Adjust NODE_VERSION as desired
-ARG NODE_VERSION=24.0.0
-FROM node:${NODE_VERSION}-slim AS base
+RUN apk add --no-cache python3 make g++
 
-LABEL fly_launch_runtime="AdonisJS"
-
-# AdonisJS app lives here
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV="production"
+COPY package*.json ./
+RUN npm ci --omit=dev
 
-
-# Throw-away build stage to reduce size of final image
-FROM base AS build
-
-# Install packages needed to build node modules
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
-
-# Install node modules
-COPY package-lock.json package.json ./
-RUN npm ci --include=dev
-
-# Copy application code
 COPY . .
 
-# Build application
-RUN npm run build
+RUN node ace build
 
+RUN mkdir -p /app/tmp
 
-# Final stage for app image
-FROM base
+EXPOSE 3333
 
-# Copy built application
-COPY --from=build /app /app
-
-# Setup sqlite3 on a separate volume
-RUN mkdir -p /data
-VOLUME /data
-
-# Entrypoint sets up the container.
-ENTRYPOINT [ "/app/docker-entrypoint.js" ]
-
-# Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
-ENV CACHE_VIEWS="true" \
-    DATABASE_URL="file:///data/sqlite.db" \
-    DRIVE_DISK="local" \
-    HOST="0.0.0.0" \
-    PORT="3000" \
-    SESSION_DRIVER="cookie"
-CMD [ "node", "/app/build/server.js" ]
+CMD sh -c "node build/ace.js migration:run --force && node build/bin/server.js"
