@@ -16,5 +16,5 @@ export const globalThrottle = limiter.define('global', () => {
 })
 
 export const createThrottle = limiter.define('create', () => {
-  return limiter.allowRequests(10).every('1 minute')
+  return limiter.allowRequests(100).every('1 minute')
 })

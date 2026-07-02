@@ -110,6 +110,13 @@ Importe o arquivo `montree-shop-list.postman_collection.json` no Postman para te
 npm test
 ```
 
+### Cobertura
+
+| Suite      | Descrição                                         | Testes |
+| ---------- | ------------------------------------------------- | ------ |
+| `unit`     | GitHubService — mock fetch, erros, lista vazia    | 3      |
+| `functional` | Models Item e Compra — CRUD, relações, estoque | 8      |
+
 ## Segurança
 
 | Proteção                | Implementação                                                            |
