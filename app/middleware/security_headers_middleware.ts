@@ -12,7 +12,6 @@ export default class SecurityHeadersMiddleware {
       'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'
     )
     ctx.response.header('X-DNS-Prefetch-Control', 'off')
-    ctx.response.header('Content-Security-Policy', "default-src 'none'")
 
     return next()
   }
