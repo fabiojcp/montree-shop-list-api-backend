@@ -40,13 +40,23 @@ Execute as migrations:
 node ace migration:run
 ```
 
-## Executar
+## Executar (Desenvolvimento)
 
 ```bash
 npm run dev
 ```
 
 A API estará disponível em `http://localhost:3333`.
+
+## Deploy (Produção)
+
+```bash
+npm run build
+cd build
+npm ci --omit="dev"
+node ace migration:run
+npm start
+```
 
 ## Endpoints
 

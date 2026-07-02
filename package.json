@@ -8,7 +8,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "start": "node bin/server.js",
+    "start": "node build/bin/server.js",
+    "start:dev": "node ace serve",
     "build": "node ace build",
     "dev": "node ace serve --hmr",
     "test": "node ace test",

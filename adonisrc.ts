@@ -41,7 +41,12 @@ export default defineConfig({
     forceExit: false,
   },
 
-  metaFiles: [],
+  metaFiles: [
+    {
+      pattern: 'docs/swagger.yml',
+      reloadServer: false,
+    },
+  ],
 
   hooks: {
     init: [indexEntities()],
