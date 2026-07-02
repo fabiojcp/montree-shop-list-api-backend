@@ -36,6 +36,7 @@ ENV LIMITER_STORE=database
 EXPOSE 3333
 
 CMD sh -c ' \
+  mkdir -p /app/tmp && \
   echo "TZ=$TZ" > /app/.env && \
   echo "PORT=$PORT" >> /app/.env && \
   echo "HOST=$HOST" >> /app/.env && \
