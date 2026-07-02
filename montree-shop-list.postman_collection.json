@@ -1,0 +1,109 @@
+{
+  "info": {
+    "name": "Montree Shop List API",
+    "description": "API REST para gerenciamento de catálogo de itens e lista de compras com compradores aleatórios do GitHub.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Itens",
+      "item": [
+        {
+          "name": "Criar Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Notebook\",\n  \"preco\": 3500.00,\n  \"qtd_atual\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3333/itens",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3333",
+              "path": ["itens"]
+            }
+          }
+        },
+        {
+          "name": "Listar Itens",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3333/itens",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3333",
+              "path": ["itens"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Compras",
+      "item": [
+        {
+          "name": "Criar Compra",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item_id\": 1\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3333/compras",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3333",
+              "path": ["compras"]
+            }
+          }
+        },
+        {
+          "name": "Listar Compras",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3333/compras",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3333",
+              "path": ["compras"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documentação",
+      "item": [
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3333/swagger",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3333",
+              "path": ["swagger"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
