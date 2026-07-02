@@ -23,7 +23,7 @@ COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 
-RUN mkdir -p /app/tmp
+RUN mkdir -p /app/build/tmp
 
 ENV TZ=UTC
 ENV PORT=3333
@@ -36,7 +36,7 @@ ENV LIMITER_STORE=database
 EXPOSE 3333
 
 CMD sh -c ' \
-  mkdir -p /app/tmp && \
+  mkdir -p /app/build/tmp && \
   echo "TZ=$TZ" > /app/.env && \
   echo "PORT=$PORT" >> /app/.env && \
   echo "HOST=$HOST" >> /app/.env && \

@@ -12,7 +12,7 @@ primary_region = 'gru'
 
 [[mounts]]
   source = 'data'
-  destination = '/app/tmp'
+  destination = '/app/build/tmp'
 
 [http_service]
   internal_port = 3333
