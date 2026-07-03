@@ -48,6 +48,27 @@ npm run dev
 
 A API estará disponível em `http://localhost:3333`.
 
+## CI/CD
+
+O deploy é automático via GitHub Actions em push na `main`. Basta commitar com a flag `[deploy]`:
+
+```bash
+git commit -m "feat: nova feature [deploy]"
+```
+
+| Flag | Efeito |
+|---|---|
+| `[deploy]` | (opcional) Deixa explícito que quer deploy |
+| `[skip ci]` | Pula teste e deploy |
+| `[no deploy]` | Pula deploy (testa apenas) |
+
+### Setup do token
+
+```bash
+flyctl auth token                    # gera o token no terminal
+# cole em: GitHub → Settings → Secrets → FLY_API_TOKEN
+```
+
 ## Deploy (Produção)
 
 ```bash
