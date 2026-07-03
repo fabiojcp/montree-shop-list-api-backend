@@ -27,16 +27,16 @@ test.group('GitHubService', () => {
     }
   })
 
-  test('getRandomUserLogin throws when API returns error status', async ({ assert }) => {
+  test('getRandomUserLogin throws when API returns non-retriable error', async ({ assert }) => {
     const originalFetch = globalThis.fetch
 
     globalThis.fetch = async () => {
-      return new Response('Internal Server Error', { status: 500 })
+      return new Response('Forbidden', { status: 403 })
     }
 
     try {
       const service = new GitHubService()
-      await assert.rejects(() => service.getRandomUserLogin(), 'GitHub API returned status 500')
+      await assert.rejects(() => service.getRandomUserLogin(), 'GitHub API returned status 403')
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -62,4 +62,22 @@ test.group('GitHubService', () => {
       globalThis.fetch = originalFetch
     }
   })
+
+  test('getRandomUserLogin retries on server error and eventually throws', async ({ assert }) => {
+    const originalFetch = globalThis.fetch
+    let callCount = 0
+
+    globalThis.fetch = async () => {
+      callCount++
+      return new Response('Server Error', { status: 500 })
+    }
+
+    try {
+      const service = new GitHubService()
+      await assert.rejects(() => service.getRandomUserLogin(), 'GitHub API returned status 500')
+      assert.isAtLeast(callCount, 2)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  }).timeout(5000)
 })

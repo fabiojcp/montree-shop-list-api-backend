@@ -5,9 +5,21 @@ import { createCompraValidator } from '#validators/compra'
 import GitHubService from '#services/github_service'
 
 export default class ComprasController {
-  async index({ response }: HttpContext) {
-    const compras = await Compra.query().preload('item').orderBy('id', 'asc')
-    return response.json(compras)
+  async index({ request, response }: HttpContext) {
+    const page = request.input('page', 1)
+    const limit = request.input('limit', 20)
+
+    const compras = await Compra.query().preload('item').orderBy('id', 'asc').paginate(page, limit)
+
+    return response.json({
+      data: compras.all(),
+      meta: {
+        page: compras.currentPage,
+        limit: compras.perPage,
+        total: compras.total,
+        lastPage: compras.lastPage,
+      },
+    })
   }
 
   async store({ request, response }: HttpContext) {

@@ -6,6 +6,7 @@ import { globalThrottle, createThrottle } from '#start/limiter'
 
 const ItensController = () => import('#controllers/itens_controller')
 const ComprasController = () => import('#controllers/compras_controller')
+const HealthController = () => import('#controllers/health_controller')
 
 router
   .group(() => {
@@ -20,6 +21,8 @@ router
     router.post('/', [ComprasController, 'store']).use(createThrottle)
   })
   .prefix('/compras')
+
+router.get('/health', [HealthController, 'index'])
 
 router.get('/swagger', async ({ response }) => {
   const html = `<!DOCTYPE html>

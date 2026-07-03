@@ -5,10 +5,14 @@ server.errorHandler(() => import('#exceptions/handler'))
 
 server.use([
   () => import('#middleware/container_bindings_middleware'),
+  () => import('#middleware/request_id_middleware'),
   () => import('@adonisjs/cors/cors_middleware'),
   () => import('#middleware/security_headers_middleware'),
 ])
 
-router.use([() => import('@adonisjs/core/bodyparser_middleware')])
+router.use([
+  () => import('@adonisjs/core/bodyparser_middleware'),
+  () => import('#middleware/response_envelope_middleware'),
+])
 
 export const middleware = router.named({})

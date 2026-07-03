@@ -166,39 +166,71 @@ flyctl auth token                    # gera o token no terminal
 fly deploy
 ```
 
+## Features de Produção
+
+| Feature               | Descrição                                                                                                                                   | Onde                                                                                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Health Check**      | `GET /health` — status da aplicação (`up`/`down`), latência do banco, uptime                                                                | [`app/controllers/health_controller.ts`](app/controllers/health_controller.ts)                                                                                 |
+| **Paginação**         | `GET /itens?page=1&limit=20` e `GET /compras?page=1&limit=20` — resposta com `{ data, meta: { page, limit, total, lastPage } }`             | [`app/controllers/itens_controller.ts`](app/controllers/itens_controller.ts), [`app/controllers/compras_controller.ts`](app/controllers/compras_controller.ts) |
+| **X-Request-Id**      | Todo response inclui header `X-Request-Id` com o ID único da requisição (gerado pelo AdonisJS)                                              | [`app/middleware/request_id_middleware.ts`](app/middleware/request_id_middleware.ts)                                                                           |
+| **Retry com Backoff** | Se a API do GitHub retornar `429` ou `5xx`, tenta até 3x com delay exponencial (1s, 2s). Erros `4xx` (não-retriáveis) falham imediatamente. | [`app/services/github_service.ts`](app/services/github_service.ts)                                                                                             |
+| **Response Envelope** | Respostas de sucesso (2xx) são envelopadas em `{ data, meta: { timestamp } }`. Erros mantêm formato direto.                                 | [`app/middleware/response_envelope_middleware.ts`](app/middleware/response_envelope_middleware.ts)                                                             |
+
 ## Endpoints
 
-### Itens
+| Método | Rota       | Descrição                                                         | Parâmetros                         |
+| ------ | ---------- | ----------------------------------------------------------------- | ---------------------------------- |
+| `GET`  | `/health`  | Health check — status, uptime, latência do banco                  | —                                  |
+| `POST` | `/itens`   | Cria um novo item no catálogo                                     | Body: `{ nome, preco, qtd_atual }` |
+| `GET`  | `/itens`   | Lista itens com paginação                                         | Query: `?page=1&limit=20`          |
+| `POST` | `/compras` | Cria compra com comprador aleatório do GitHub (retry com backoff) | Body: `{ item_id }`                |
+| `GET`  | `/compras` | Lista compras com item relacionado + paginação                    | Query: `?page=1&limit=20`          |
+| `GET`  | `/swagger` | Documentação interativa OpenAPI                                   | —                                  |
 
-| Método | Rota     | Descrição                        |
-| ------ | -------- | -------------------------------- |
-| `POST` | `/itens` | Cria um novo item no catálogo    |
-| `GET`  | `/itens` | Lista todos os itens cadastrados |
+### Exemplos
 
-**POST /itens** — Corpo da requisição:
+**POST /itens**:
+
+```json
+{ "nome": "Notebook", "preco": 3500.0, "qtd_atual": 10 }
+```
+
+**POST /compras**:
+
+```json
+{ "item_id": 1 }
+```
+
+**GET /itens?page=1&limit=20** (resposta):
 
 ```json
 {
-  "nome": "Notebook",
-  "preco": 3500.0,
-  "qtd_atual": 10
+  "data": [
+    {
+      "id": 1,
+      "nome": "Notebook",
+      "preco": 3500,
+      "qtd_atual": 9,
+      "created_at": "...",
+      "updated_at": "..."
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total": 42, "lastPage": 3 }
 }
 ```
 
-### Compras
-
-| Método | Rota       | Descrição                                            |
-| ------ | ---------- | ---------------------------------------------------- |
-| `POST` | `/compras` | Cria uma compra com comprador aleatório do GitHub    |
-| `GET`  | `/compras` | Lista todas as compras com dados do item relacionado |
-
-**POST /compras** — Corpo da requisição:
+**GET /health** (resposta):
 
 ```json
 {
-  "item_id": 1
+  "status": "up",
+  "timestamp": "2026-07-02T22:00:00.000Z",
+  "uptime": 3600,
+  "latency": { "database": "3ms" }
 }
 ```
+
+> **Headers:** Todos os responses incluem `X-Request-Id` para tracing. Respostas 2xx são envelopadas em `{ data, meta }`. Respostas 4xx/5xx mantêm formato direto.
 
 ## Documentação Interativa (Swagger)
 
@@ -220,10 +252,10 @@ npm test
 
 ### Cobertura
 
-| Suite        | Descrição                                      | Testes |
-| ------------ | ---------------------------------------------- | ------ |
-| `unit`       | GitHubService — mock fetch, erros, lista vazia | 3      |
-| `functional` | Models Item e Compra — CRUD, relações, estoque | 8      |
+| Suite        | Descrição                                                          | Testes |
+| ------------ | ------------------------------------------------------------------ | ------ |
+| `unit`       | GitHubService — mock fetch, erro não-retriável, lista vazia, retry | 4      |
+| `functional` | Models Item e Compra — CRUD, relações, estoque                     | 8      |
 
 ## Segurança
 

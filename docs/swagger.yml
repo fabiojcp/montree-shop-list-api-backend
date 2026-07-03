@@ -1,16 +1,40 @@
 openapi: '3.0.3'
 info:
   title: Montree Shop List API
-  description: API REST para gerenciamento de catálogo de itens e lista de compras com compradores aleatórios do GitHub.
+  description: |
+    API REST para gerenciamento de catálogo de itens e lista de compras com compradores aleatórios do GitHub.
+
+    **Features:** Health check, paginação, rate limiting, retry com backoff, response envelope padronizado, X-Request-Id.
   version: '1.0.0'
   contact:
     name: Fabio
 
 servers:
+  - url: 'https://montree-shop-list-api-backend.fly.dev'
+    description: Produção (Fly.io)
   - url: 'http://localhost:3333'
-    description: Servidor local de desenvolvimento
+    description: Desenvolvimento local
 
 paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Verifica a saúde da aplicação
+      responses:
+        '200':
+          description: Aplicação saudável
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Banco de dados indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDownResponse'
+
   /itens:
     post:
       tags:
@@ -25,10 +49,15 @@ paths:
       responses:
         '201':
           description: Item criado com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: ID único da requisição
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Item'
+                $ref: '#/components/schemas/ItemEnvelope'
         '422':
           description: Dados de entrada inválidos
           content:
@@ -38,22 +67,41 @@ paths:
     get:
       tags:
         - Itens
-      summary: Lista todos os itens cadastrados
+      summary: Lista itens com paginação
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Número da página
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Itens por página
       responses:
         '200':
-          description: Lista de itens
+          description: Lista paginada de itens
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: ID único da requisição
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Item'
+                $ref: '#/components/schemas/PaginatedItems'
 
   /compras:
     post:
       tags:
         - Compras
-      summary: Cria um novo registro de compra com comprador aleatório do GitHub
+      summary: Cria compra com comprador aleatório do GitHub
+      description: |
+        Valida o item, consome a API do GitHub, seleciona um usuário aleatório e registra a compra.
+        Usa **retry com backoff exponencial** (1s, 2s) em caso de falha 429/5xx da API do GitHub.
       requestBody:
         required: true
         content:
@@ -63,10 +111,15 @@ paths:
       responses:
         '201':
           description: Compra criada com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: ID único da requisição
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Compra'
+                $ref: '#/components/schemas/CompraEnvelope'
         '400':
           description: Item fora de estoque
           content:
@@ -86,7 +139,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
         '502':
-          description: Serviço externo (GitHub) indisponível
+          description: Serviço externo (GitHub) indisponível após retries
           content:
             application/json:
               schema:
@@ -94,19 +147,112 @@ paths:
     get:
       tags:
         - Compras
-      summary: Lista todos os registros de compra com dados do item relacionado
+      summary: Lista compras com dados do item relacionado
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Número da página
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Compras por página
       responses:
         '200':
-          description: Lista de compras
+          description: Lista paginada de compras com item incluso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: ID único da requisição
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/CompraWithItem'
+                $ref: '#/components/schemas/PaginatedCompras'
 
 components:
   schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'up'
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: integer
+          example: 3600
+        latency:
+          type: object
+          properties:
+            database:
+              type: string
+              example: '3ms'
+
+    HealthDownResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'down'
+        database:
+          type: string
+          example: 'disconnected'
+
+    PaginatedMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 42
+        lastPage:
+          type: integer
+          example: 3
+
+    PaginatedItems:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        meta:
+          $ref: '#/components/schemas/PaginatedMeta'
+
+    PaginatedCompras:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompraWithItem'
+        meta:
+          $ref: '#/components/schemas/PaginatedMeta'
+
+    ItemEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Item'
+
+    CompraEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Compra'
+
     Item:
       type: object
       properties:
@@ -139,14 +285,17 @@ components:
       properties:
         nome:
           type: string
+          maxLength: 200
           example: 'Notebook'
         preco:
           type: number
           minimum: 0
+          maximum: 99999999.99
           example: 3500.00
         qtd_atual:
           type: integer
           minimum: 0
+          maximum: 999999
           example: 10
 
     CreateCompraRequest:
@@ -209,6 +358,8 @@ components:
     ValidationError:
       type: object
       properties:
+        message:
+          type: string
         errors:
           type: array
           items:
