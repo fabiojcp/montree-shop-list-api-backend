@@ -22,8 +22,8 @@ A cada nova compra registrada, a API busca um usuário aleatório da [API públi
 ## Instalação
 
 ```bash
-git clone <repo-url>
-cd montree-shop-list-api
+git clone https://github.com/fabiojcp/montree-shop-list-api-backend.git
+cd montree-shop-list-api-backend
 npm install
 ```
 
@@ -69,14 +69,24 @@ flyctl auth token                    # gera o token no terminal
 # cole em: GitHub → Settings → Secrets → FLY_API_TOKEN
 ```
 
-## Deploy (Produção)
+## Variáveis de Ambiente
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `NODE_ENV` | `production` | Ambiente (`development`, `production`, `test`) |
+| `PORT` | `3333` | Porta HTTP |
+| `HOST` | `0.0.0.0` | Endereço de bind |
+| `APP_KEY` | — | Chave de criptografia (gere com `node ace generate:key`) |
+| `APP_URL` | — | URL pública da API |
+| `LOG_LEVEL` | `info` | Nível de log |
+| `TZ` | `UTC` | Timezone |
+| `GITHUB_API_URL` | `https://api.github.com/users` | Endpoint da API do GitHub |
+| `LIMITER_STORE` | `database` | Storage do rate limiter (`database` ou `memory`) |
+
+## Deploy (Fly.io)
 
 ```bash
-npm run build
-cd build
-npm ci --omit="dev"
-node ace migration:run
-npm start
+fly deploy
 ```
 
 ## Endpoints
@@ -146,7 +156,7 @@ npm test
 | **SQL Injection**       | ORM Lucid usa prepared statements — queries parametrizadas por padrão    |
 | **Validação de Input**  | VineJS com limites de caracteres (`nome` ≤ 200, `preco` ≤ 99.999.999,99) |
 | **CORS**                | Configurado via `@adonisjs/cors` — permite apenas GET e POST             |
-| **Security Headers**    | X-Content-Type-Options, X-Frame-Options, Referrer-Policy, CSP, etc.      |
+| **Security Headers**    | X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy |
 | **Body Size Limit**     | JSON limitado a 1 MB                                                     |
 | **Tratamento de Erros** | Respostas JSON padronizadas, sem vazamento de stack trace em produção    |
 
