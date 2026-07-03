@@ -6,6 +6,83 @@ API REST para gerenciamento de catálogo de itens e lista de compras com comprad
 
 A cada nova compra registrada, a API busca um usuário aleatório da [API pública do GitHub](https://api.github.com/users) e o associa como comprador do item selecionado.
 
+## Requisitos do Desafio
+
+### Obrigatórios
+
+| Requisito | Como foi implementado | Onde |
+|---|---|---|
+| `POST /itens` | Controller recebe `{ nome, preco, qtd_atual }`, valida com [VineJS](https://vinejs.dev/), cria registro e retorna 201 (ou 422 se inválido) | [`app/controllers/itens_controller.ts`](app/controllers/itens_controller.ts), [`app/validators/item.ts`](app/validators/item.ts) |
+| `GET /itens` | Query ordenada por ID, retorna array de itens | [`app/controllers/itens_controller.ts`](app/controllers/itens_controller.ts) |
+| `POST /compras` | Valida `item_id`, busca item no banco, consome [GitHub API](https://api.github.com/users), seleciona usuário aleatório, salva compra e decrementa estoque | [`app/controllers/compras_controller.ts`](app/controllers/compras_controller.ts), [`app/services/github_service.ts`](app/services/github_service.ts) |
+| `GET /compras` | `preload('item')` do [Lucid ORM](https://lucid.adonisjs.com/) — retorna cada compra com nome, preço e demais campos do item relacionado | [`app/controllers/compras_controller.ts`](app/controllers/compras_controller.ts) |
+| Integração GitHub API | Service dedicado com `fetch`, seleção aleatória (`Math.random`), tipagem TypeScript | [`app/services/github_service.ts`](app/services/github_service.ts) |
+| SQLite + Migrations | Banco [SQLite](https://www.sqlite.org/) via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3), migrations gerenciadas pelo [Lucid](https://lucid.adonisjs.com/docs/migrations) | [`database/migrations/1758943400000_create_itens_table.ts`](database/migrations/1758943400000_create_itens_table.ts), [`database/migrations/1758943500000_create_compras_table.ts`](database/migrations/1758943500000_create_compras_table.ts) |
+| Tabela `itens` | `id` (PK autoincrement), `nome` (string), `preco` (decimal), `qtd_atual` (integer), `created_at`, `updated_at` | [`app/models/item.ts`](app/models/item.ts) |
+| Tabela `compras` | `id` (PK), `comprador_github_login` (string), `item_id` (FK → `itens.id` com `ON DELETE CASCADE`), timestamps | [`app/models/compra.ts`](app/models/compra.ts) |
+| Relacionamento FK + ORM | Chave estrangeira no banco (`item_id REFERENCES itens.id`) + `@belongsTo` / `@hasMany` no Lucid | [`database/migrations/1758943500000_create_compras_table.ts`](database/migrations/1758943500000_create_compras_table.ts), [`app/models/item.ts`](app/models/item.ts), [`app/models/compra.ts`](app/models/compra.ts) |
+| Arquitetura MVC | Controllers, Models, Services e Validators em pastas separadas dentro de `app/` | [`app/`](app/) |
+| Coleção Postman/Insomnia | Arquivo JSON de exportação na raiz do projeto, com todas as rotas e exemplos de body | [`montree-shop-list.postman_collection.json`](montree-shop-list.postman_collection.json) |
+
+### Diferenciais
+
+| Diferencial | Como foi implementado | Onde |
+|---|---|---|
+| **AdonisJS** | Framework full-stack com [Lucid ORM](https://lucid.adonisjs.com/) para relacionamentos, [VineJS](https://vinejs.dev/) para validação e migrations nativas | Projeto inteiro |
+| **Swagger/OpenAPI** | Especificação [OpenAPI 3.0](https://swagger.io/specification/) em `docs/swagger.yml` + UI interativa via CDN em `GET /swagger` | [`docs/swagger.yml`](docs/swagger.yml), [`start/routes.ts`](start/routes.ts) |
+| **Testes Automatizados** | 3 unitários (GitHubService com mock de fetch) + 8 de integração (Models Item/Compra: CRUD, relações, estoque) | [`tests/unit/github_service.spec.ts`](tests/unit/github_service.spec.ts), [`tests/functional/models.spec.ts`](tests/functional/models.spec.ts) |
+| **Variáveis de Ambiente** | 9 variáveis tipadas via `Env.create()` do AdonisJS, `.env` versionado via `.env.example` (sem secrets) | [`start/env.ts`](start/env.ts), [`.env.example`](.env.example) |
+
+### Tratamento de Erros
+
+**P: A API do GitHub estiver fora do ar?**
+
+R: A compra **não é processada**. Tratamos como se os dados do comprador não chegaram — é uma falha de dependência externa, não uma pré-compra. O [`GitHubService`](app/services/github_service.ts) lança exceção quando `fetch` retorna qualquer status de erro. O [`ExceptionHandler`](app/exceptions/handler.ts) captura a mensagem e retorna:
+
+| HTTP | Resposta |
+|---|---|
+| `502 Bad Gateway` | `{"message": "Serviço externo indisponível. Tente novamente mais tarde."}` |
+
+Nenhum dado é salvo no banco — nem compra, nem alteração de estoque.
+
+**P: For enviado um `item_id` que não existe no banco na rota `POST /compras`?**
+
+R: [`Item.findOrFail()`](https://lucid.adonisjs.com/docs/crud#find-or-fail) do Lucid ORM lança `E_ROW_NOT_FOUND` quando o ID não é localizado. O [`ExceptionHandler`](app/exceptions/handler.ts) captura e retorna:
+
+| HTTP | Resposta |
+|---|---|
+| `404 Not Found` | `{"message": "Registro não encontrado."}` |
+
+A requisição é barrada antes de qualquer escrita no banco.
+
+**P: O corpo da requisição para criar um item for inválido?**
+
+R: [VineJS](https://vinejs.dev/) valida todos os campos antes de chegar ao controller. As regras aplicadas ([`app/validators/item.ts`](app/validators/item.ts)):
+
+| Campo | Regra |
+|---|---|
+| `nome` | Obrigatório, string, 1–200 caracteres |
+| `preco` | Obrigatório, número, 0 a 99.999.999,99 |
+| `qtd_atual` | Obrigatório, número, 0 a 999.999 |
+
+Se qualquer campo violar, retorna com detalhes de cada erro:
+
+| HTTP | Resposta |
+|---|---|
+| `422 Unprocessable Entity` | `{"message": "Validation failure", "errors": [{"field": "nome", "message": "...", "rule": "required"}, ...]}` |
+
+O mesmo vale para `POST /compras` com body inválido — `item_id` é validado como número obrigatório ≥ 1.
+
+**P: O item existe, mas está sem estoque?**
+
+R: O controller verifica `item.qtd_atual <= 0` antes de consumir a API do GitHub e retorna:
+
+| HTTP | Resposta |
+|---|---|
+| `400 Bad Request` | `{"message": "Item fora de estoque", "item_id": 1, "qtd_atual": 0}` |
+
+Nenhuma compra é registrada, o estoque não é alterado.
+
 ## Tecnologias
 
 - [AdonisJS](https://adonisjs.com/) (Node.js + TypeScript)
